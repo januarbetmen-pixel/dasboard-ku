@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <nav class="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <i class="fa-brands fa-github text-3xl text-sky-400"></i>
+                <h1 class="text-xl font-bold tracking-wide">GitHub Dashboard</h1>
+            </div>
+            
+            <div class="flex w-full md:w-auto gap-2">
+                <input 
+                    type="text" 
+                    id="usernameInput" 
+                    placeholder="Masukkan username GitHub..." 
+                    class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-sky-500 w-full md:w-64"
+                    value="torvalds"
+                >
+                <button 
+                    onclick="fetchGitHubData()" 
+                    class="bg-sky-500 hover:bg-sky-600 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass"></i> Cari
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        
+        <div id="errorMessage" class="hidden bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-xl mb-6 text-sm"></div>
+
+        <section id="profileSection" class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 mb-8 backdrop-blur">
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                <img id="avatar" src="" alt="Avatar" class="w-24 h-24 rounded-full border-2 border-sky-400/50">
+                <div class="flex-1 text-center md:text-left">
+                    <div class="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                        <h2 id="name" class="text-2xl font-bold text-white"></h2>
+                        <a id="githubLink" href="#" target="_blank" class="text-sky-400 hover:underline text-sm"><span id="username"></span> <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a>
+                    </div>
+                    <p id="bio" class="text-slate-400 text-sm mb-4 max-w-2xl"></p>
+                    <div class="flex flex-wrap justify-center md:justify-start gap-4 text-xs text-slate-300">
+                        <span id="location" class="flex items-center gap-1"><i class="fa-solid fa-location-dot text-slate-500"></i> -</span>
+                        <span id="company" class="flex items-center gap-1"><i class="fa-solid fa-building text-slate-500"></i> -</span>
+                        <span id="joinedDate" class="flex items-center gap-1"><i class="fa-solid fa-calendar text-slate-500"></i> -</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Public Repos</p>
+                <p id="publicRepos" class="text-2xl font-bold text-sky-400">0</p>
+            </div>
+            <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Followers</p>
+                <p id="followers" class="text-2xl font-bold text-emerald-400">0</p>
+            </div>
+            <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Following</p>
+                <p id="following" class="text-2xl font-bold text-purple-400">0</p>
+            </div>
+            <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-xl">
+                <p class="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">Public Gists</p>
+                <p id="publicGists" class="text-2xl font-bold text-amber-400">0</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-book-bookmark text-sky-400"></i> Repositori Terbaru
+                </h3>
+                <div id="repoList" class="space-y-4">
+                    </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-sky-400"></i> Aktivitas Terakhir
+                </h3>
+                <div id="activityList" class="bg-slate-800/30 border border-slate-700/50 rounded-xl p-4 space-y-4">
+                    </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Fetch data secara otomatis untuk user default saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', fetchGitHubData);
+
+        // Memungkinkan pencarian dengan menekan tombol Enter
+        document.getElementById('usernameInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') fetchGitHubData();
+        });
+
+        async function fetchGitHubData() {
+            const username = document.getElementById('usernameInput').value.trim();
+            const errorContainer = document.getElementById('errorMessage');
+            
+            if (!username) return;
+
+            errorContainer.classList.add('hidden');
+
+            try {
+                // 1. Fetch data profil pengguna
+                const userResponse = await fetch(`https://api.github.com/users/${username}`);
+                if (!userResponse.ok) throw new Error('Pengguna tidak ditemukan atau batas API tercapai.');
+                const userData = await userResponse.json();
+
+                // Update UI Profile
+                document.getElementById('avatar').src = userData.avatar_url;
+                document.getElementById('name').innerText = userData.name || userData.login;
+                document.getElementById('username').innerText = `@${userData.login}`;
+                document.getElementById('githubLink').href = userData.html_url;
+                document.getElementById('bio').innerText = userData.bio || 'Tidak ada bio tersedia.';
+                document.getElementById('location').innerHTML = `<i class="fa-solid fa-location-dot text-slate-500"></i> ${userData.location || 'N/A'}`;
+                document.getElementById('company').innerHTML = `<i class="fa-solid fa-building text-slate-500"></i> ${userData.company || 'N/A'}`;
+                document.getElementById('joinedDate').innerHTML = `<i class="fa-solid fa-calendar text-slate-500"></i> Bergabung ${new Date(userData.created_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'short' })}`;
+
+                // Update Stats Cards
+                document.getElementById('publicRepos').innerText = userData.public_repos;
+                document.getElementById('followers').innerText = userData.followers;
+                document.getElementById('following').innerText = userData.following;
+                document.getElementById('publicGists').innerText = userData.public_gists;
+
+                // 2. Fetch Repositori Pengguna (diurutkan berdasarkan update terbaru)
+                const reposResponse = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=6`);
+                const reposData = await reposResponse.json();
+                renderRepos(reposData);
+
+                // 3. Fetch Aktivitas Terakhir Pengguna
+                const eventsResponse = await fetch(`https://api.github.com/users/${username}/events/public?per_page=5`);
+                const eventsData = await eventsResponse.json();
+                renderActivities(eventsData);
+
+            } catch (error) {
+                errorContainer.innerText = error.message;
+                errorContainer.classList.remove('hidden');
+            }
+        }
+
+        function renderRepos(repos) {
+            const repoList = document.getElementById('repoList');
+            repoList.innerHTML = '';
+
+            if (repos.length === 0) {
+                repoList.innerHTML = `<p class="text-slate-500 text-sm">Tidak ada repositori publik ditemukan.</p>`;
+                return;
+            }
+
+            repos.forEach(repo => {
+                const card = `
+                    <div class="bg-slate-800/40 border border-slate-700/50 p-5 rounded-xl hover:border-slate-600 transition-colors">
+                        <div class="flex items-center justify-between mb-2">
+                            <a href="${repo.html_url}" target="_blank" class="font-semibold text-sky-400 hover:underline flex items-center gap-2">
+                                ${repo.name}
+                                <span class="text-xs font-normal border border-slate-700 px-2 py-0.5 rounded-full text-slate-400">${repo.visibility}</span>
+                            </a>
+                            <div class="flex items-center gap-3 text-xs text-slate-400">
+                                <span><i class="fa-regular fa-star text-amber-400"></i> ${repo.stargazers_count}</span>
+                                <span><i class="fa-solid fa-code-fork text-slate-400"></i> ${repo.forks_count}</span>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-xs mb-4 line-clamp-2">${repo.description || 'Tidak ada deskripsi.'}</p>
+                        <div class="flex items-center gap-4 text-xs text-slate-400">
+                            ${repo.language ? `<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>${repo.language}</span>` : ''}
+                            <span>Diperbarui: ${new Date(repo.updated_at).toLocaleDateString('id-ID')}</span>
+                        </div>
+                    </div>
+                `;
+                repoList.innerHTML += card;
+            });
+        }
+
+        function renderActivities(events) {
+            const activityList = document.getElementById('activityList');
+            activityList.innerHTML = '';
+
+            if (!events || events.length === 0) {
+                activityList.innerHTML = `<p class="text-slate-500 text-xs">Tidak ada aktivitas publik terbaru.</p>`;
+                return;
+            }
+
+            events.forEach(event => {
+                let eventText = 'Melakukan aksi';
+                let iconClass = 'fa-circle-dot';
+
+                switch (event.type) {
+                    case 'PushEvent':
+                        eventText = `Melakukan push ${event.payload.commits?.length || 0} commit ke`;
+                        iconClass = 'fa-code-commit text-emerald-400';
+                        break;
+                    case 'CreateEvent':
+                        eventText = `Membuat ${event.payload.ref_type}`;
+                        iconClass = 'fa-plus text-sky-400';
+                        break;
+                    case 'WatchEvent':
+                        eventText = 'Memberikan star pada';
+                        iconClass = 'fa-star text-amber-400';
+                        break;
+                    case 'ForkEvent':
+                        eventText = 'Melakukan fork pada';
+                        iconClass = 'fa-code-fork text-purple-400';
+                        break;
+                }
+
+                const item = `
+                    <div class="flex items-start gap-3 border-b border-slate-800 pb-3 last:border-none last:pb-0">
+                        <i class="fa-solid ${iconClass} mt-1 text-sm"></i>
+                        <div class="text-xs">
+                            <p class="text-slate-300">
+                                ${eventText} <a href="https://github.com/${event.repo.name}" target="_blank" class="text-sky-400 hover:underline font-medium">${event.repo.name}</a>
+                            </p>
+                            <span class="text-slate-500">${new Date(event.created_at).toLocaleDateString('id-ID')}</span>
+                        </div>
+                    </div>
+                `;
+                activityList.innerHTML += item;
+            });
+        }
+    </script>
+</body>
+</html>
